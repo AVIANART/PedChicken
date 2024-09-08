@@ -18,12 +18,13 @@ export default class CommandsHandler extends LoggedManager {
 
     async loadCommands() {
         const commandsDir = join(__dirname,"../commands");
+        const fileExt = env.NODE_DEV ? ".ts" : ".js";
         const jsonCommands = [];
         const rest = new REST().setToken(Config.discord.token);
 
         this.logger.debug("Loading Button Commands...", this);
         readdirSync(commandsDir+"/ButtonCommands").forEach((file) => {
-            if(!file.endsWith(".js") && !file.endsWith(".ts")) return;
+            if(!file.endsWith(fileExt)) return;
             let command = require(`${commandsDir}/ButtonCommands/${file}`).default as ButtonCommand;
             this.buttonCommands.push(command);
             this.client.commands.set(command.name, command);
@@ -31,7 +32,7 @@ export default class CommandsHandler extends LoggedManager {
 
         this.logger.debug("Loading Slash Commands...", this);
         readdirSync(commandsDir+"/SlashCommands").forEach((file) => {
-            if(!file.endsWith(".js") && !file.endsWith(".ts")) return;
+            if(!file.endsWith(fileExt)) return;
             let command = require(`${commandsDir}/SlashCommands/${file}`).default as SlashCommand;
             this.slashCommands.push(command);
         });
