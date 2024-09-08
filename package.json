@@ -1,0 +1,35 @@
+{
+  "name": "pedchicken",
+  "version": "3.0.0",
+  "description": "ALTTPR Seed Rolling bot for Discord, Racetime, etc",
+  "main": "./dist/index.js",
+  "scripts": {
+    "clean": "tsc --build --clean",
+    "build": "bun run clean && tsc --project tsconfig.json",
+    "start": "bun run start:bot",
+    "start:bot": "bun run build && bun --enable-source-maps dist/index.js",
+    "debug": "bun run build && cross-env NODE_DEV=true nodemon src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AVIANART/PedChicken"
+  },
+  "author": "hiimcody1",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AVIANART/PedChicken/issues"
+  },
+  "homepage": "https://github.com/AVIANART/PedChicken#readme",
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "discord.js": "^14.16.1",
+    "tiny-typed-emitter": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "eslint": "^9.10.0",
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}
