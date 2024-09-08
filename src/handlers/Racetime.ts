@@ -4,6 +4,7 @@ import RacetimeClient from "rtgg-bot";
 
 export class RacetimeBot extends LoggedManager {
     private rtBot;
+    public online = false;
 
     constructor(clientId: string, clientSecret: string, clientCategory: string, client) {
         super(client);
@@ -22,6 +23,7 @@ export class RacetimeBot extends LoggedManager {
     async fetchAllRaces() {
         try {
             const races = await this.rtBot.fetchRaces();
+            this.online = true;
             for(let race of races) {
                 if(race.status.value == "open" || race.status.value == "invitational") {
                     const raceData = await this.rtBot.fetchRaceData(race.url);
@@ -55,6 +57,7 @@ export class RacetimeBot extends LoggedManager {
                 }
             } 
         } catch(e) {
+            this.online = false;
             this.client.logger.warn([`Failed to fetch races:`, e], this);
         }
     }

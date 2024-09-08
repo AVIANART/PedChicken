@@ -4,6 +4,7 @@ import CommandsHandler from "./handlers/Commands";
 import Logger, { DiscordLogger, LogLevel } from "./util/Logger";
 import { RacetimeBot } from "./handlers/Racetime";
 import { Spambot } from "./handlers/Spambot";
+import { UptimeMonitor } from "./handlers/Monitor";
 
 const client = new Client({
 	intents: [
@@ -44,6 +45,8 @@ client.on("ready", async (client) => {
 	await racetime.initialize();
 
 	const spambotDetection = new Spambot(client);
+
+	const monitor = new UptimeMonitor(racetime, client);
 	
 	client.logger.info(`[${client.user.username}] Ready!`);
 });
