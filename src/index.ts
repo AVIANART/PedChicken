@@ -3,6 +3,7 @@ import * as Config from '../config.json';
 import CommandsHandler from "./handlers/Commands";
 import Logger, { DiscordLogger, LogLevel } from "./util/Logger";
 import { RacetimeBot } from "./handlers/Racetime";
+import { Spambot } from "./handlers/Spambot";
 
 const client = new Client({
 	intents: [
@@ -41,6 +42,8 @@ client.on("ready", async (client) => {
 
 	const racetime = new RacetimeBot(Config.racetime.clientId, Config.racetime.clientSecret, Config.racetime.clientCategory, client);
 	await racetime.initialize();
+
+	const spambotDetection = new Spambot(client);
 	
 	client.logger.info(`[${client.user.username}] Ready!`);
 });

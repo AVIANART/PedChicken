@@ -23,6 +23,7 @@
   "dependencies": {
     "cross-env": "^7.0.3",
     "discord.js": "^14.16.1",
+    "rtgg-bot": "file:../rtgg-bot",
     "tiny-typed-emitter": "^2.1.0"
   },
   "devDependencies": {
