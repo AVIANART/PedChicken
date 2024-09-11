@@ -57,11 +57,12 @@ export class Avianart extends LoggedManager {
         this.logger.debug(`Generating ${race ? 'race ' : ''}seed using ${namespace ? namespace + '/' : ''}${preset}...`, this);
         
         let seedParams = {};
+        preset = preset.toLowerCase();
         
         if(race)
             seedParams['race'] = true;
         if(namespace)
-            seedParams['namespace'] = namespace;
+            seedParams['namespace'] = namespace.toLowerCase();
 
         let seedRequest: RequestInit = {
             method: 'POST',
@@ -115,6 +116,8 @@ export class Avianart extends LoggedManager {
             },
             body: JSON.stringify([payload])
         };
+
+        user = user.toLowerCase();
 
         const createResponse = await fetch(`${Config.avianart.api.url}?action=createpreset&namespace=` + user, createRequest);
         const createStatus = await createResponse.json() as AvianCreatePayload;
