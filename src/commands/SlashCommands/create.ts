@@ -45,9 +45,16 @@ const command: SlashCommand = {
 
         const avianart = new Avianart(interaction.client);
         interaction.client.logger.debug(`Creating preset ${name} in ${branch} for ${user} using ${yaml.url}...`, this);
-        const preset = await avianart.createPreset(user, yaml, name, notes, branch);
+        let preset;
+        try {
+            preset = await avianart.createPreset(user, yaml, name, notes, branch);
+        } catch(err) {
+            interaction.client.logger.error(`Failed to create preset ${name} in ${branch} for ${user}! [${interaction.guild?.name ?? "DM"}]`, this);
+            reply.edit(`Failed to create the preset ${name} in ${branch} for ${user}. ${err}`);
+            return;
+        }
         if(!preset) {
-            interaction.client.logger.warn(`Failed to create the preset ${name} in ${branch} for ${user}`);
+            interaction.client.logger.warn(`Failed to create the preset ${name} in ${branch} for ${user} [${interaction.guild?.name ?? "DM"}]`);
             reply.edit(`Failed to create the preset ${name} in ${branch} for ${user}, please try again later.`);
         } else {
             reply.edit(`Preset ${name} created successfully!`);

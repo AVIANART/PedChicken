@@ -100,6 +100,10 @@ export class Avianart extends LoggedManager {
     }
 
     async createPreset(user: string, yaml: Attachment, name: string, notes: string, branch: string): Promise<AvianCreatePayload> {
+        if(name.includes("/")) {
+            this.logger.warn(`Invalid preset name: ${name}!`, this);
+            throw new Error("Invalid preset name! (Do not include your namespace in the preset name)");
+        }
         const payload = {
             yaml: yaml.url,
             name: name,
