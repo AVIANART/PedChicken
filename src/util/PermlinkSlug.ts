@@ -78,6 +78,8 @@ const hashToEmoji = (hash) => {
 const buildMetadataSlug = (preset: string, seed_data: AvianResponsePayload, namespace?: string) => {
     const slug = new EmbedBuilder();
 
+    preset = preset.toLowerCase();
+
     if(namespace) {
         preset = `${namespace}/${preset}`;
     }
