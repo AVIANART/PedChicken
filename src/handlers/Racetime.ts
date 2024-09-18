@@ -118,7 +118,12 @@ export class RacetimeBot extends LoggedManager {
 			}
 
             let avianart = new Avianart(this.client);
-            let seed = (await avianart.generateSeed(mode, true, namespace)).response;
+            let seedPayload = await avianart.generateSeed(mode, true, namespace);
+            if(!seedPayload) {
+                socket.sendMessage({action: "message", data:{message: "Failed to generate seed, did you type the preset correctly?", guid: Math.round(Math.random() * 10000) + ""}});
+                return;
+            }
+            let seed = seedPayload.response;
 
             if(seed.patch) {
                 socket.sendMessage({action: "setinfo", data: {info_bot: `${mode} - https://avianart.games/perm/${seed.hash} - (${this.formatHashForRacetime(seed.spoiler.meta.hash.replaceAll(", ", "/"))})`}});
