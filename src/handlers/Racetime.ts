@@ -32,7 +32,7 @@ export class RacetimeBot extends LoggedManager {
                         this.rtBot.sockets.get(raceData.websocket_bot_url).sendMessage({
                             action: "message",
                             data: {
-                                message: "Use !avianart to roll an avianart seed",
+                                message: "Use !avianart for AA seed rolling options. Use !avianroll if you know your preset.",
                                 guid: Math.round(Math.random() * 10000) + ""
                             }
                         });

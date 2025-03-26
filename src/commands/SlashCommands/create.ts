@@ -26,7 +26,7 @@ const command: SlashCommand = {
                 .setDescription("The branch to create the preset in. (defaults to 'DRUnstable')")
                 .setRequired(false)
                 .addChoices([
-                    {name: "DR Unstable", value: "DRVolatile"},
+                    {name: "DR Unstable", value: "DRUnstable"},
                     {name: "Overworld Randomizer", value: "OWR"},
                     {name: "Karafruit OWR", value: "Troll"}
                 ])
@@ -50,7 +50,7 @@ const command: SlashCommand = {
             interaction.client.logger.warn(`Failed to create the preset ${name} in ${branch} for ${user}`);
             reply.edit(`Failed to create the preset ${name} in ${branch} for ${user}, please try again later.`);
         } else {
-            reply.edit(`Preset ${name} created successfully!`);
+            reply.edit(`Preset ${name} created successfully!\n\nYou may roll it using \`${user}/${name}\``);
         }
     }
 }
