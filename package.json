@@ -8,7 +8,7 @@
     "build": "bun run clean && tsc --project tsconfig.json",
     "start": "bun run start:bot",
     "start:bot": "bun run build && bun --enable-source-maps dist/index.js",
-    "debug": "bun run build && cross-env NODE_DEV=true nodemon src/index.ts"
+    "debug": "bun run build && cross-env NODE_DEV=false nodemon src/index.ts"
   },
   "repository": {
     "type": "git",
@@ -21,16 +21,21 @@
   },
   "homepage": "https://github.com/AVIANART/PedChicken#readme",
   "dependencies": {
+    "axios": "^1.8.4",
+    "axios-cookiejar-support": "^5.0.5",
+    "bun": "^1.2.6",
     "cross-env": "^7.0.3",
-    "discord.js": "^14.16.1",
+    "discord.js": "^14.18.0",
     "rtgg-bot": "file:../rtgg-bot",
-    "tiny-typed-emitter": "^2.1.0"
+    "tiny-typed-emitter": "^2.1.0",
+    "tough-cookie": "^5.1.2"
   },
   "devDependencies": {
-    "@types/node": "^22.5.4",
-    "eslint": "^9.10.0",
-    "nodemon": "^3.1.4",
+    "@types/bun": "^1.2.6",
+    "@types/node": "^22.13.13",
+    "eslint": "^9.23.0",
+    "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.8.2"
   }
 }

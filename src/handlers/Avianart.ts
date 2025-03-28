@@ -44,6 +44,19 @@ export type AvianCreatePayload = {
     }
 }
 
+export type AvianPresetPayload = {
+    presets: [
+        {
+            key: string,
+            name: string,
+            description: string,
+            branch: string,
+            slug: string,
+            category: string
+        }
+    ]
+}
+
 export class Avianart extends LoggedManager {
     constructor(client) {
         super(client);
@@ -145,5 +158,22 @@ export class Avianart extends LoggedManager {
         let permlink = await permlinkRaw.json() as AvianGenPayload;
         
         return permlink;
+    }
+
+    async fetchPresetList(user: string): Promise<AvianPresetPayload> {
+        this.logger.trace(`Fetching preset list for ${user}...`, this);
+
+        let statusRequest: RequestInit = {
+            method: 'GET',
+            headers: {
+                'Authorization': Config.avianart.newapi.key
+            }
+        };
+        
+        let permlinkRaw = await fetch(`${Config.avianart.newapi.url}/v1/presets/${user}`, statusRequest);
+        let permlink = await permlinkRaw.json() as AvianPresetPayload;
+        
+        return permlink;
+
     }
 }

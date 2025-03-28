@@ -1,5 +1,9 @@
+#!/usr/bin/bash
+
+cd /home/pedchicken/LadderChicken/
+
 while true
 do
-	bun start dev | tee -a "pedchicken.$(date +'%Y-%m-%d').log"
+	npx bun run start dev | tee -a "ladderchicken.$(date +'%Y-%m-%d').log"
 	sleep 10
 done

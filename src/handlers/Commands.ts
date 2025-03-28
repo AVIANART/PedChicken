@@ -42,7 +42,7 @@ export default class CommandsHandler extends LoggedManager {
             jsonCommands.push(command.command.toJSON());
             this.client.commands.set(command.command.name, command);
         });
-
+        /*
         if(env.NODE_DEV) {
             this.logger.debug("Skipping command registration in development mode, register to guild instead", this);
             const guild = await this.client.guilds.fetch(Config.discord.debug.guild) as Guild;
@@ -57,5 +57,6 @@ export default class CommandsHandler extends LoggedManager {
                 this.client.logger.info(`Successfully registered ${registeredCommands.length} application (/) commands and ${this.buttonCommands.length} button commands globally`);
             }
         }
+        */
     }
 }

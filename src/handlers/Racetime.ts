@@ -1,3 +1,4 @@
+import { CreateRaceData, RTMessageTypes, RTPacketTypes } from "rtgg-bot/src/types";
 import { Avianart } from "./Avianart";
 import { LoggedManager } from "./LoggedManager";
 import RacetimeClient from "rtgg-bot";
@@ -20,6 +21,37 @@ export class RacetimeBot extends LoggedManager {
         }, 5000);
     }
 
+    async joinRaceRoom(url: string): Promise<boolean> {
+        let joined = await this.rtBot.joinRaceRoom(url);        
+        return joined;
+    }
+
+    async sendMessage(url: string, message: string) {
+        let socket = this.rtBot.sockets.get(url);
+        if(socket) {
+            socket.sendMessage({action: "message", data: {message: message, guid: Math.round(Math.random() * 10000) + ""}});
+        }
+    }
+
+    async startRace(url: string) {
+        let socket = await this.rtBot.sockets.get(url);
+        if(socket) {
+            socket.sendMessage({
+                action: RTPacketTypes.BEGIN
+            });
+        }
+    }
+
+    async createRaceRoom(raceData: CreateRaceData) {
+        try {
+            const raceRoom = await this.rtBot.createRace(raceData);
+            return raceRoom;
+        } catch(e) {
+            this.client.logger.error(`Error while creating race room: ${e}`, this);
+            return null;
+        }
+    }
+
     async fetchAllRaces() {
         try {
             const races = await this.rtBot.fetchRaces();
@@ -32,7 +64,7 @@ export class RacetimeBot extends LoggedManager {
                         this.rtBot.sockets.get(raceData.websocket_bot_url).sendMessage({
                             action: "message",
                             data: {
-                                message: "Use !avianart to roll an avianart seed",
+                                message: "Use !avianart for AA seed rolling options. Use !avianroll if you know your preset.",
                                 guid: Math.round(Math.random() * 10000) + ""
                             }
                         });

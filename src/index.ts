@@ -3,8 +3,9 @@ import * as Config from '../config.json';
 import CommandsHandler from "./handlers/Commands";
 import Logger, { DiscordLogger, LogLevel } from "./util/Logger";
 import { RacetimeBot } from "./handlers/Racetime";
-import { Spambot } from "./handlers/Spambot";
 import { UptimeMonitor } from "./handlers/Monitor";
+import { Memes } from "./handlers/Memes";
+import { JankLadder } from "./handlers/JankLadder";
 
 const client = new Client({
 	intents: [
@@ -41,12 +42,16 @@ client.on("ready", async (client) => {
 		}
 	});
 
-	const racetime = new RacetimeBot(Config.racetime.clientId, Config.racetime.clientSecret, Config.racetime.clientCategory, client);
-	await racetime.initialize();
+	//const racetime = new RacetimeBot(Config.racetime.clientId, Config.racetime.clientSecret, Config.racetime.clientCategory, client);
+	//await racetime.initialize();
 
-	const spambotDetection = new Spambot(client);
+	//const spambotDetection = new Spambot(client);
 
-	const monitor = new UptimeMonitor(racetime, client);
+	//const monitor = new UptimeMonitor(racetime, client);
+
+	//const memes = new Memes(client);
+
+	const jankladder = new JankLadder(client);
 	
 	client.logger.info(`[${client.user.username}] Ready!`);
 });
@@ -56,6 +61,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	let commandName = "";
 	let handler = "";
 	let verb = "";
+	/*
 	if(interaction.isChatInputCommand()) {
 		command = interaction.client.commands.get(interaction.commandName);
 		commandName = interaction.commandName;
@@ -100,4 +106,5 @@ client.on(Events.InteractionCreate, async (interaction) => {
 			}
 		}
 	}
+		*/
 })

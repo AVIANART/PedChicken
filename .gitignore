@@ -132,3 +132,4 @@ dist
 # config files
 config.json
 bun.lockb
+jankladder.db
