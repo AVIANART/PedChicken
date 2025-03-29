@@ -200,13 +200,8 @@ export class JankLadder extends LoggedManager {
             races++;
 
             if(races >= racesPerDay) {
+                startHour = startHour == 10 ? 9 : 10;
                 startTime.setHours(startHour, 0, 0, 0);
-
-                startHour--;
-                if(startHour <= cutoffHour) {
-                    startHour = 10;
-                    startTime.setDate(startTime.getDate() + 1);
-                }
                 races=0;
 
             }

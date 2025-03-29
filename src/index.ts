@@ -2,9 +2,6 @@ import { Client, Collection, Events, GatewayIntentBits, GuildTextBasedChannel, I
 import * as Config from '../config.json';
 import CommandsHandler from "./handlers/Commands";
 import Logger, { DiscordLogger, LogLevel } from "./util/Logger";
-import { RacetimeBot } from "./handlers/Racetime";
-import { UptimeMonitor } from "./handlers/Monitor";
-import { Memes } from "./handlers/Memes";
 import { JankLadder } from "./handlers/JankLadder";
 
 const client = new Client({
@@ -41,15 +38,6 @@ client.on("ready", async (client) => {
 			command.initialize(client);
 		}
 	});
-
-	//const racetime = new RacetimeBot(Config.racetime.clientId, Config.racetime.clientSecret, Config.racetime.clientCategory, client);
-	//await racetime.initialize();
-
-	//const spambotDetection = new Spambot(client);
-
-	//const monitor = new UptimeMonitor(racetime, client);
-
-	//const memes = new Memes(client);
 
 	const jankladder = new JankLadder(client);
 	
