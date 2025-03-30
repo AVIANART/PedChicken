@@ -1,7 +1,8 @@
-import { CreateRaceData, RTMessageTypes, RTPacketTypes } from "rtgg-bot/src/types";
-import { Avianart } from "./Avianart";
+import { CreateRaceData, RaceData, RaceDetails, RTAction, RTMessageTypes, RTPacketTypes } from "rtgg-bot/src/types";
+import { Avianart, AvianGenPayload, AvianResponsePayload } from "./Avianart";
 import { LoggedManager } from "./LoggedManager";
 import RacetimeClient from "rtgg-bot";
+import WebSocketClient from "rtgg-bot/src/websocket/client";
 
 export class RacetimeBot extends LoggedManager {
     private rtBot;
@@ -27,14 +28,56 @@ export class RacetimeBot extends LoggedManager {
     }
 
     async sendMessage(url: string, message: string) {
-        let socket = this.rtBot.sockets.get(url);
+        let socket = await this.ensureSocket(url);
+        if(!socket) {
+            if(!await this.joinRaceRoom(url)) {
+                this.client.logger.fatal(`Cannot reach raceroom to send messages`, this);
+                return;
+            }
+            socket = this.rtBot.sockets.get(url);
+            if(!socket) {
+                this.client.logger.fatal(`Failed to join raceroom for url: ${url}`, this);
+                return;
+            }
+        }
         if(socket) {
-            socket.sendMessage({action: "message", data: {message: message, guid: Math.round(Math.random() * 10000) + ""}});
+            socket.sendMessage(<RTAction>{
+                action: "message", 
+                data: {
+                    message: message, 
+                    guid: Math.round(Math.random() * 10000) + ""
+                }
+            });
         }
     }
 
+    async fetchRaceData(url: string): Promise<RaceDetails> {
+        return await this.rtBot.fetchRaceData(url);
+    }
+
+    async updateRaceInfo(url: string, info: string) {
+        let socket = await this.ensureSocket(url);
+        if(!socket) {
+            if(!await this.joinRaceRoom(url)) {
+                this.client.logger.fatal(`Cannot update raceroom for room URL https://racetime.gg/${url} - socket not found! Race info: ${info}`, this);
+                return;
+            }
+            socket = this.rtBot.sockets.get(url);
+            if(!socket) {
+                this.client.logger.fatal(`Failed to join raceroom for url: ${url}`, this);
+                return;
+            }
+        }
+        socket.sendMessage(<RTAction>{
+            action: RTPacketTypes.SET_INFO,
+            data: {
+                info_bot: info
+            }
+        });
+    }
+
     async startRace(url: string) {
-        let socket = await this.rtBot.sockets.get(url);
+        let socket = await this.ensureSocket(url);
         if(socket) {
             socket.sendMessage({
                 action: RTPacketTypes.BEGIN
@@ -183,9 +226,37 @@ export class RacetimeBot extends LoggedManager {
         }
     }
 
+    private async ensureSocket(url: string): Promise<WebSocketClient> {
+        let socket = this.rtBot.sockets.get(url);
+        let roomInfo = await this.fetchRaceData(url);
+        if(!roomInfo) {
+            this.client.logger.error(`Failed to fetch room info for url: ${url}`, this);
+            return null;
+        }
+        if(!roomInfo.websocket_bot_url) {
+            this.client.logger.error(`No websocket url found for room: ${url}`, this);
+            return null;
+        }
+        if(!this.rtBot.sockets.has(roomInfo.websocket_bot_url)) {
+            let result = await this.joinRaceRoom(roomInfo.websocket_bot_url);
+            if(!result) {
+                this.client.logger.error(`Failed to join raceroom for url: ${url}`, this);
+                return null;
+            }
+            this.client.logger.debug(`Joined raceroom for url: ${url}`, this);
+            this.client.logger.debug(`Socket for url: ${url} is now available`, this);
+            return this.rtBot.sockets.get(roomInfo.websocket_bot_url);
+        }
+        if(!this.rtBot.sockets.has(roomInfo.websocket_bot_url)) {
+            this.client.logger.error(`Socket not found for url: ${url}`, this);
+            return null;
+        }
+        return this.rtBot.sockets.get(roomInfo.websocket_bot_url);
+    }
+
 
     //TODO, make this less bad
-    private formatHashForRacetime(hash): string {
+    public formatHashForRacetime(hash): string {
         const translateNames = new Map(
             [
                 ['Bomb',    'Bombs'],
