@@ -50,6 +50,7 @@ export class JankLadder extends LoggedManager {
                     architype: row.architype,
                     mode: row.mode,
                     raceRoom: row.raceRoom ? { url: row.raceRoom } : null,
+                    active: row.raceActive,
                     seed: row.seed,
                 };
             }
@@ -89,7 +90,7 @@ export class JankLadder extends LoggedManager {
                 ) {
                     if (!entry.raceRoom) {
                         const raceRoom: RaceDetails = await this.racetime.createRaceRoom(<CreateRaceData>{
-                            info_user: `Jank Ladder Series - [${entry.architype}] - ${entry.mode}`,
+                            info_user: `Step Ladder Series - [${entry.architype}] - ${entry.mode}`,
                             custom_goal: "Finish the Race",
                             start_delay: 15,
                             time_limit: 3,
@@ -103,7 +104,7 @@ export class JankLadder extends LoggedManager {
                             chat_message_delay: 0
                         });
                         if (raceRoom) {
-                            this.client.logger.info(`Created race room for ${entry.architype} - ${entry.mode} - Room URL: ${raceRoom.url}`, this);
+                            this.client.logger.info(`Created race room for ${entry.architype} - ${entry.mode} - Room URL: https://racetime.gg${raceRoom.url}`, this);
                             schedule.find(e => e.time.getTime() === entry.time.getTime()).raceRoom = raceRoom;
                             const raceChannel = await this.client.channels.fetch(Config.jankladder.raceChannelId) as TextChannel;
                             await raceChannel.send(`**${entry.mode}** -- https://racetime.gg${raceRoom.url}`);
@@ -125,21 +126,26 @@ export class JankLadder extends LoggedManager {
                                 let theSeed = seed.response;
                                 let info;
                                 try {
-                                    info = `${mode} - https://avianart.games/perm/${theSeed.hash} - (${this.racetime.formatHashForRacetime(theSeed.spoiler.meta.hash.replaceAll(", ", "/"))})`;
+                                    info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.id} - (${this.racetime.formatHashForRacetime(theSeed.spoiler.meta.hash.replaceAll(", ", "/"))})`;
                                 } catch(e) {
-                                    info = `${mode} - https://avianart.games/perm/${theSeed.hash}`;
+                                    info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.id}`;
                                 }
                                 this.racetime.updateRaceInfo(entry.raceRoom.url, info);
-                                this.racetime.sendMessage(entry.raceRoom.url, `https://avianart.games/perm/${theSeed.hash}`);
+                                this.racetime.sendMessage(entry.raceRoom.url, `https://alttpr.racing/getseed.php?race=${entry.id}`);
                                 this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 0, theSeed.hash);
-                            }, 500);
+                            }, 3000);
                         }
                         if(entry.time.getTime() - now.getTime() <= 1000 * 70 && entry.time.getTime() - now.getTime() >= 1000 * 60) {
                             this.client.logger.info(`Race starting in less than a minute, warning about it`, this);
                             this.racetime.sendMessage(entry.raceRoom.url, `Race starting in less than a minute! Ready up or you will be removed!`);
+                            setTimeout(async() => {
+                                this.client.logger.info(`Race starting in less 15 seconds, autostarting it`, this);
+                                this.racetime.startRace(entry.raceRoom.url);
+                                this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 1, entry.seed);
+                            }, 45 * 1000);
                         }
-                        if(entry.time.getTime() - now.getTime() < 1000 * 15 && entry.raceActive === 0 && now.getTime() + 1000 * 60 * 15 > entry.time.getTime()) {
-                            this.client.logger.info(`Race starting in less 15 seconds, starting it`, this);
+                        if(entry.time.getTime() - now.getTime() < 1000 && !entry.active) {
+                            this.client.logger.info(`Race started, updating it`, this);
                             this.racetime.startRace(entry.raceRoom.url);
                             this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 1, entry.seed);
                         }
@@ -160,7 +166,7 @@ export class JankLadder extends LoggedManager {
             const cutoffTime = new Date(now);
             cutoffTime.setHours(cutoffTime.getHours() - 2);
             const schedule = this.fetchSchedule();
-            const upcomingRaces = schedule.filter(entry => entry.time > cutoffTime).slice(0, 36);
+            const upcomingRaces = schedule.filter(entry => entry.time > cutoffTime).slice(0, 12);
             //const upcomingRaces = schedule.slice(0, 12);
             for (const entry of upcomingRaces) {
                 entry.time.setHours(entry.time.getHours());
@@ -211,7 +217,8 @@ export class JankLadder extends LoggedManager {
                 time: new Date(startTime),
                 architype,
                 mode,
-                raceRoom: null
+                raceRoom: null,
+                active: 0
             });
             this.addRaceToSchedule(startTime, architype, mode);
             scheduledTimes.add(startTime.getTime());
@@ -236,8 +243,9 @@ export class JankLadder extends LoggedManager {
         }
 
         /*
+        // Create a race that starts in 15 minutes for testing purposes
         let fifteenMinutesFromNow = new Date();
-        fifteenMinutesFromNow.setMinutes(fifteenMinutesFromNow.getMinutes() + 11);
+        fifteenMinutesFromNow.setMinutes(fifteenMinutesFromNow.getMinutes() + 15);
         this.addRaceToSchedule(fifteenMinutesFromNow, "Jank", "Casual Boots");
         schedule.push({
             id: null,
@@ -245,7 +253,7 @@ export class JankLadder extends LoggedManager {
             architype: "Jank",
             mode: "Casual Boots",
         });
-        */
+        //*/
         this.client.logger.debug(`Generated schedule with ${schedule.length} races`, this);
 
         return schedule;
