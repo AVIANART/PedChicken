@@ -29,7 +29,9 @@ export type AvianResponsePayload = {
         startgen: number,
         gentime: number,
     },
-    patch?: {}
+    patch?: {},
+    vt?: boolean
+    fshash?: string
 }
 
 export type AvianGenPayload = {
@@ -67,7 +69,7 @@ export class Avianart extends LoggedManager {
     }
     
     async generateSeed(preset: string, race: boolean, namespace?: string | undefined): Promise<AvianGenPayload> {
-        this.logger.debug(`Generating ${race ? 'race ' : ''}seed using ${namespace ? namespace + '/' : ''}${preset}...`, this);
+        this.logger.trace(`Generating ${race ? 'race ' : ''}seed using ${namespace ? namespace + '/' : ''}${preset}...`, this);
         
         let seedParams = {};
         preset = preset.toLowerCase();
@@ -100,7 +102,7 @@ export class Avianart extends LoggedManager {
             if(!status.response.status) {
                 //Probably complete
                 if(status.response.patch) {
-                    this.logger.info(`Seed generation complete!`, this);
+                    this.logger.trace(`Seed generation complete!`, this);
                     return status;
                 }
             }
@@ -140,7 +142,7 @@ export class Avianart extends LoggedManager {
             this.logger.error(`Failed to create preset ${name} in ${branch} for ${user}!`, this);
             return null;
         }
-        this.logger.debug(`Preset ${name} created in ${branch} for ${user}!`, this);
+        this.logger.trace(`Preset ${name} created in ${branch} for ${user}!`, this);
         return createStatus;
     }
 

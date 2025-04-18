@@ -42,21 +42,21 @@ export default class CommandsHandler extends LoggedManager {
             jsonCommands.push(command.command.toJSON());
             this.client.commands.set(command.command.name, command);
         });
-        /*
-        if(env.NODE_DEV) {
+        
+        //if(env.NODE_DEV) {
             this.logger.debug("Skipping command registration in development mode, register to guild instead", this);
             const guild = await this.client.guilds.fetch(Config.discord.debug.guild) as Guild;
             const registeredCommands = await rest.put(Routes.applicationGuildCommands(Config.discord.clientId, guild.id), { body: jsonCommands }) as SlashCommand[];
             if(registeredCommands.length > 0) {
                 this.client.logger.info(`Successfully registered ${registeredCommands.length} application (/) commands and ${this.buttonCommands.length} button commands to guild ${guild.name}`);
             }
-        } else {
+        /*} else {
             this.logger.debug(`Registering ${jsonCommands.length} commands on Discord...`, this);
             const registeredCommands = await rest.put(Routes.applicationCommands(Config.discord.clientId), { body: jsonCommands }) as SlashCommand[];
             if(registeredCommands.length > 0) {
                 this.client.logger.info(`Successfully registered ${registeredCommands.length} application (/) commands and ${this.buttonCommands.length} button commands globally`);
             }
         }
-        */
+        //*/
     }
 }

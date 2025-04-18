@@ -5,57 +5,74 @@ import { RacetimeBot } from "./Racetime";
 import { CreateRaceData, RaceDetails } from "rtgg-bot/src/types";
 import { Database } from "bun:sqlite";
 import { Avianart, AvianGenPayload } from "./Avianart";
+import { Race, RacesDB } from "./db/Races";
+import { ScheduleDB, ScheduledRace, ScheduledRaceFormatted } from "./db/Schedule";
+import { Setting, SettingsDB } from "./db/Settings";
 
 export class JankLadder extends LoggedManager {
     lastScheduleMessage: string;
-    db: Database;
     racetime: RacetimeBot;
     avianart: Avianart;
+    RacesDB: RacesDB;
+    ScheduleDB: ScheduleDB;
+    SettingsDB: SettingsDB
+
     constructor(client) {
         super(client);
         this.avianart = new Avianart(client);
         this.racetime = new RacetimeBot(Config.racetime.clientId, Config.racetime.clientSecret, Config.racetime.clientCategory, this.client);
-        this.db = new Database(Config.jankladder.dbPath);
-        //this.db.prepare("DROP TABLE IF EXISTS jankladder").run();
-        this.db.prepare("CREATE TABLE IF NOT EXISTS jankladder (id INTEGER PRIMARY KEY, time TEXT, architype TEXT, mode TEXT, raceRoom TEXT , raceActive BOOL , seed TEXT)").run();
+        this.RacesDB = new RacesDB(this.client);
+        this.ScheduleDB = new ScheduleDB(this.client);
+        this.SettingsDB = new SettingsDB(this.client);
         this.initSchedule();
         this.refreshSchedule();
     }
 
-    addRaceToSchedule(time: Date, architype: string, mode: string): number | bigint {
-        const insert = this.db.prepare("INSERT INTO jankladder (id, time, architype, mode, raceRoom, raceActive, seed) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        let result = insert.run(null, time.toISOString(), architype, mode, null, 0, null);
-        this.fetchSchedule();
-        return result.lastInsertRowid;
-    }
-
-    updateRaceInSchedule(id: number, time: Date, architype: string, mode: string, raceRoom: string|null, raceActive: number, seed: string|null): void {
-        const update = this.db.prepare("UPDATE jankladder SET time = ?, architype = ?, mode = ? , raceRoom = ? , raceActive = ? , seed = ? WHERE id = ?");
-        update.run(time.toISOString(), architype, mode, raceRoom, raceActive, seed, id);
-        this.fetchSchedule();
-    }
-
-    fetchSchedule() {
-        //this.logger.debug(`Fetching schedule...`, this);
-        let scheduleRaw = this.db.prepare(`SELECT * FROM jankladder ORDER BY time ASC`);
-        //this.logger.debug(`Fetching schedule for month ${month}`, this);
-        //this.logger.debug(scheduleRaw, this);
-        let schedule = [];
-        if (scheduleRaw.all().length > 0) {
-            const rows = scheduleRaw.all() as any[];
-            schedule = rows.map(row => {
-                return {
-                    id: row.id,
-                    time: new Date(row.time),
-                    architype: row.architype,
-                    mode: row.mode,
-                    raceRoom: row.raceRoom ? { url: row.raceRoom } : null,
-                    active: row.raceActive,
-                    seed: row.seed,
-                };
+    buildPinglistForRace(mode: string): string {
+        const rolesToPing = [];
+        const modeRoles = Config.jankladder.modeRoles[mode];
+        if (modeRoles) {
+            for (const role of modeRoles) {
+                if (Config.jankladder.roleIndex[role]) {
+                    rolesToPing.push(`<@&${Config.jankladder.roleIndex[role]}>`);
+                }
             }
-            );
         }
+        return rolesToPing.join(" ");
+    }
+
+    /*
+    addRaceToSchedule(time: Date, architype: string, mode: string): number | bigint {
+        return this.ScheduleDB.insertScheduledRace(<ScheduledRace>{
+            time: time.toISOString(),
+            architype: architype,
+            mode: mode
+        });
+    }
+
+    updateRaceInSchedule(id: number, time: Date, architype: string, mode: string, raceId: number): void {
+        this.ScheduleDB.updateScheduledRace(<ScheduledRace>{
+            id: id,
+            time: time.toISOString(),
+            architype: architype,
+            mode: mode,
+            raceId: raceId
+        });
+    }
+    */
+
+    fetchSchedule(): ScheduledRaceFormatted[] {
+        const scheduleRaw = this.ScheduleDB.getNextScheduledRaces();
+        let schedule: ScheduledRaceFormatted[] = [];
+        schedule = scheduleRaw.map(row => {
+            return <ScheduledRaceFormatted>{
+                id: row.id,
+                time: new Date(row.time),
+                architype: row.architype,
+                mode: row.mode,
+                raceId: row.raceId,
+            };
+        });
         return schedule;
     }
 
@@ -88,7 +105,11 @@ export class JankLadder extends LoggedManager {
                     entry.time.getTime() > cutoffTime.getTime() &&
                     now.getTime() - entry.time.getTime() <= 1000 * 60 * 15
                 ) {
-                    if (!entry.raceRoom) {
+                    if (entry.raceId == -1) {
+                        if(this.SettingsDB.getSettingByName("createRacerooms")?.value == false) {
+                            this.client.logger.debug(`Skipping race creation for Scheduled Race ${entry.id} [${entry.architype}/${entry.mode}] @ <t:${Math.floor(entry.time.getTime() / 1000)}:f> because racerooms are disabled`, this);
+                            continue;
+                        }
                         const raceRoom: RaceDetails = await this.racetime.createRaceRoom(<CreateRaceData>{
                             info_user: `Step Ladder Series - [${entry.architype}] - ${entry.mode}`,
                             custom_goal: "Finish the Race",
@@ -105,15 +126,35 @@ export class JankLadder extends LoggedManager {
                         });
                         if (raceRoom) {
                             this.client.logger.info(`Created race room for ${entry.architype} - ${entry.mode} - Room URL: https://racetime.gg${raceRoom.url}`, this);
-                            schedule.find(e => e.time.getTime() === entry.time.getTime()).raceRoom = raceRoom;
+                            const raceId = this.RacesDB.insertRace(<Race>{
+                                raceRoom: raceRoom.url
+                            });
+                            this.ScheduleDB.updateScheduledRace(<ScheduledRace>{
+                                id: entry.id,
+                                time: entry.time.toISOString(),
+                                architype: entry.architype,
+                                mode: entry.mode,
+                                raceId: raceId
+                            });
                             const raceChannel = await this.client.channels.fetch(Config.jankladder.raceChannelId) as TextChannel;
-                            await raceChannel.send(`**${entry.mode}** -- https://racetime.gg${raceRoom.url}`);
-                            this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, raceRoom.url, 0, null);
+                            const rolesToPing = this.buildPinglistForRace(entry.mode);
+                            const startsInXMinutes = `<t:${Math.floor(entry.time.getTime() / 1000)}:R>`;
+                            //Clear the channel before sending the message
+                            await raceChannel.bulkDelete(100, true);
+                            await raceChannel.send(`${rolesToPing}\n**${entry.mode}** -- https://racetime.gg${raceRoom.url} -- ${startsInXMinutes}`);
                         }
                     } else {
-                        if(entry.time.getTime() - now.getTime() <= 1000 * 60 * 10 && entry.seed === null) {
+                        const race = this.RacesDB.getRaceById(entry.raceId);
+                        //this.logger.trace(`if(entry.time.getTime() - now.getTime() <= 1000 * 60 * 10 && race.seed === null): ${entry.time.getTime() - now.getTime() <= 1000 * 60 * 10} | ${!race.seed}`, this);
+                        if(entry.time.getTime() - now.getTime() <= 1000 * 60 * 10 && !race.seed) {
                             this.client.logger.info(`Race starting in less than 10 minutes, seeding it`, this);
-                            this.racetime.sendMessage(entry.raceRoom.url, `Rolling seed now. If nothing happens after 2 minutes, ping a ladder admin!`);
+                            this.racetime.sendMessage(race.raceRoom, `Rolling seed now. If nothing happens after 2 minutes, ping a ladder admin!`);
+                            this.RacesDB.updateRace(<Race>{
+                                id: entry.raceId,
+                                raceRoom: race.raceRoom,
+                                raceActive: false,
+                                seed: "<generating>"
+                            });
                             setTimeout(async() => {
                                 let seed: AvianGenPayload;
                                 let mode = Config.jankladder.modes[entry.mode];
@@ -126,28 +167,51 @@ export class JankLadder extends LoggedManager {
                                 let theSeed = seed.response;
                                 let info;
                                 try {
-                                    info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.id} - (${this.racetime.formatHashForRacetime(theSeed.spoiler.meta.hash.replaceAll(", ", "/"))})`;
+                                    if(theSeed.vt) {
+                                        info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.raceId} - (${theSeed.fshash.replaceAll(", ", "/")})`;
+                                    } else {
+                                        info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.raceId} - (${this.racetime.formatHashForRacetime(theSeed.spoiler.meta.hash.replaceAll(", ", "/"))})`;
+                                    }
                                 } catch(e) {
+                                    console.log(theSeed);
+                                    this.client.logger.error(`Error while formatting hash for racetime: ${e}`, this);
+                                    this.client.logger.error(`Seed: ${Object.keys(theSeed)}`, this);
+                                    this.client.logger.error(`Seed: ${Object.keys(theSeed.spoiler)}`, this);
                                     info = `${mode} - https://alttpr.racing/getseed.php?race=${entry.id}`;
                                 }
-                                this.racetime.updateRaceInfo(entry.raceRoom.url, info);
-                                this.racetime.sendMessage(entry.raceRoom.url, `https://alttpr.racing/getseed.php?race=${entry.id}`);
-                                this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 0, theSeed.hash);
+                                this.racetime.updateRaceInfo(race.raceRoom, info);
+                                this.racetime.sendMessage(race.raceRoom, `https://alttpr.racing/getseed.php?race=${entry.raceId}`);
+                                this.RacesDB.updateRace(<Race>{
+                                    id: entry.raceId,
+                                    raceActive: false,
+                                    raceRoom: race.raceRoom,
+                                    seed: theSeed.hash
+                                });
                             }, 3000);
                         }
                         if(entry.time.getTime() - now.getTime() <= 1000 * 70 && entry.time.getTime() - now.getTime() >= 1000 * 60) {
                             this.client.logger.info(`Race starting in less than a minute, warning about it`, this);
-                            this.racetime.sendMessage(entry.raceRoom.url, `Race starting in less than a minute! Ready up or you will be removed!`);
+                            this.racetime.sendMessage(race.raceRoom, `Race starting in less than a minute! Ready up or you will be removed!`);
                             setTimeout(async() => {
                                 this.client.logger.info(`Race starting in less 15 seconds, autostarting it`, this);
-                                this.racetime.startRace(entry.raceRoom.url);
-                                this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 1, entry.seed);
+                                this.racetime.startRace(race.raceRoom);
+                                this.RacesDB.updateRace(<Race>{
+                                    id: entry.raceId,
+                                    raceActive: true,
+                                    raceRoom: race.raceRoom,
+                                    seed: race.seed
+                                });
                             }, 45 * 1000);
                         }
-                        if(entry.time.getTime() - now.getTime() < 1000 && !entry.active) {
+                        if(entry.time.getTime() - now.getTime() < 1000 && !race.raceActive) {
                             this.client.logger.info(`Race started, updating it`, this);
-                            this.racetime.startRace(entry.raceRoom.url);
-                            this.updateRaceInSchedule(entry.id, entry.time, entry.architype, entry.mode, entry.raceRoom.url, 1, entry.seed);
+                            this.racetime.startRace(race.raceRoom);
+                            this.RacesDB.updateRace(<Race>{
+                                id: entry.raceId,
+                                raceActive: true,
+                                raceRoom: race.raceRoom,
+                                seed: race.seed
+                            });
                         }
                     }
                 }
@@ -170,7 +234,12 @@ export class JankLadder extends LoggedManager {
             //const upcomingRaces = schedule.slice(0, 12);
             for (const entry of upcomingRaces) {
                 entry.time.setHours(entry.time.getHours());
-                content += `<t:${Math.floor(entry.time.getTime() / 1000)}:f> (<t:${Math.floor(entry.time.getTime() / 1000)}:R>) - ${entry.mode}\n`;
+                content += `<t:${Math.floor(entry.time.getTime() / 1000)}:f> (<t:${Math.floor(entry.time.getTime() / 1000)}:R>) - ${entry.mode}`;
+                if (entry.raceId != -1) {
+                    const race = this.RacesDB.getRaceById(entry.raceId);
+                    content += ` - https://racetime.gg${race.raceRoom}`;
+                }
+                content += `\n`;
             }
             if(this.lastScheduleMessage !== content) {
                 try {
@@ -220,7 +289,11 @@ export class JankLadder extends LoggedManager {
                 raceRoom: null,
                 active: 0
             });
-            this.addRaceToSchedule(startTime, architype, mode);
+            this.ScheduleDB.insertScheduledRace(<ScheduledRace>{
+                time: startTime.toISOString(),
+                architype: architype,
+                mode: mode
+            });
             scheduledTimes.add(startTime.getTime());
 
             // Rotate mode index
@@ -245,8 +318,13 @@ export class JankLadder extends LoggedManager {
         /*
         // Create a race that starts in 15 minutes for testing purposes
         let fifteenMinutesFromNow = new Date();
-        fifteenMinutesFromNow.setMinutes(fifteenMinutesFromNow.getMinutes() + 15);
-        this.addRaceToSchedule(fifteenMinutesFromNow, "Jank", "Casual Boots");
+        fifteenMinutesFromNow.setMinutes(fifteenMinutesFromNow.getMinutes() + 11);
+        this.ScheduleDB.insertScheduledRace(<ScheduledRace>{
+            time: fifteenMinutesFromNow.toISOString(),
+            architype: "Jank",
+            mode: "Casual Boots"
+        });
+
         schedule.push({
             id: null,
             time: fifteenMinutesFromNow,

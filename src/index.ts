@@ -25,9 +25,13 @@ client.login(Config.discord.token);
 client.on("ready", async (client) => {
 	const commandsHandler = new CommandsHandler(client);
 	const loggingChannel = await (await client.guilds.fetch(Config.discord.debug.guild)).channels.fetch(Config.discord.debug.channel) as GuildTextBasedChannel;
+	const infoChannel = await (await client.guilds.fetch(Config.discord.debug.guild)).channels.fetch(Config.discord.debug.infoChannel) as GuildTextBasedChannel;
 	const discordLogger = new DiscordLogger(loggingChannel, Config.discord.debug.roles);
-	discordLogger.setLevel(Config.discord.debug.enabled ? LogLevel.DEBUG : LogLevel.WARN);
+	const discordInfoLogger = new DiscordLogger(infoChannel, Config.discord.debug.roles);
+	discordLogger.setLevel(LogLevel.DEBUG);
+	discordInfoLogger.setLevel(LogLevel.INFO);
 	client.logger.addTarget(discordLogger);
+	client.logger.addTarget(discordInfoLogger);
 	client.logger.debug(`[${client.user.username}] Startup`);
 
 	const guilds = await client.guilds.fetch();
@@ -41,7 +45,7 @@ client.on("ready", async (client) => {
 
 	const jankladder = new JankLadder(client);
 	
-	client.logger.info(`[${client.user.username}] Ready!`);
+	client.logger.debug(`[${client.user.username}] Ready!`);
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -49,7 +53,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	let commandName = "";
 	let handler = "";
 	let verb = "";
-	/*
+	
 	if(interaction.isChatInputCommand()) {
 		command = interaction.client.commands.get(interaction.commandName);
 		commandName = interaction.commandName;
@@ -94,5 +98,5 @@ client.on(Events.InteractionCreate, async (interaction) => {
 			}
 		}
 	}
-		*/
+		//*/
 })
