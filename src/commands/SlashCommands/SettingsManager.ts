@@ -79,7 +79,6 @@ const command: SlashCommand = {
             } else if (interaction.options.getNumber("number") !== null) {
                 value = interaction.options.getNumber("number");
             }
-            interaction.client.logger.debug(`Settings command executed with subcommand: ${subcommand} ${name} ${value}`, this);
             switch (subcommand) {
                 case "get":
                     if (!name) {

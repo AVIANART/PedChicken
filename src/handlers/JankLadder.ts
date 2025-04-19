@@ -25,11 +25,14 @@ export class JankLadder extends LoggedManager {
         this.ScheduleDB = new ScheduleDB(this.client);
         this.SettingsDB = new SettingsDB(this.client);
         this.initSchedule();
-        this.refreshSchedule();
     }
 
     buildPinglistForRace(mode: string): string {
         const rolesToPing = [];
+        if(this.SettingsDB.getSettingByName("pingRolesOnRoomCreation")?.value == false) {
+            this.client.logger.debug(`Skipping ping roles because pinging is disabled`, this);
+            return "";
+        }
         const modeRoles = Config.jankladder.modeRoles[mode];
         if (modeRoles) {
             for (const role of modeRoles) {
@@ -83,8 +86,12 @@ export class JankLadder extends LoggedManager {
             this.generateSchedule();
         }
         setInterval(async() => {
-            this.client.logger.trace("Refreshing schedule", this);
-            await this.refreshSchedule();
+            if(this.SettingsDB.getSettingByName("refreshSchedule")?.value == true) {
+                this.client.logger.trace("Refreshing schedule", this);
+                await this.refreshSchedule();
+            } else {
+                this.client.logger.trace("Skipping schedule refresh because setting is disabled", this);
+            }
         }, 1000 * 60);
         setInterval(async() => {
             await this.raceWatcher();
@@ -147,7 +154,7 @@ export class JankLadder extends LoggedManager {
                         const race = this.RacesDB.getRaceById(entry.raceId);
                         //this.logger.trace(`if(entry.time.getTime() - now.getTime() <= 1000 * 60 * 10 && race.seed === null): ${entry.time.getTime() - now.getTime() <= 1000 * 60 * 10} | ${!race.seed}`, this);
                         if(entry.time.getTime() - now.getTime() <= 1000 * 60 * 10 && !race.seed) {
-                            this.client.logger.info(`Race starting in less than 10 minutes, seeding it`, this);
+                            this.client.logger.debug(`Race starting in less than 10 minutes, seeding it`, this);
                             this.racetime.sendMessage(race.raceRoom, `Rolling seed now. If nothing happens after 2 minutes, ping a ladder admin!`);
                             this.RacesDB.updateRace(<Race>{
                                 id: entry.raceId,
@@ -190,10 +197,10 @@ export class JankLadder extends LoggedManager {
                             }, 3000);
                         }
                         if(entry.time.getTime() - now.getTime() <= 1000 * 70 && entry.time.getTime() - now.getTime() >= 1000 * 60) {
-                            this.client.logger.info(`Race starting in less than a minute, warning about it`, this);
+                            this.client.logger.debug(`Race starting in less than a minute, warning about it`, this);
                             this.racetime.sendMessage(race.raceRoom, `Race starting in less than a minute! Ready up or you will be removed!`);
                             setTimeout(async() => {
-                                this.client.logger.info(`Race starting in less 15 seconds, autostarting it`, this);
+                                this.client.logger.debug(`Race starting in less 15 seconds, autostarting it`, this);
                                 this.racetime.startRace(race.raceRoom);
                                 this.RacesDB.updateRace(<Race>{
                                     id: entry.raceId,
@@ -204,7 +211,7 @@ export class JankLadder extends LoggedManager {
                             }, 45 * 1000);
                         }
                         if(entry.time.getTime() - now.getTime() < 1000 && !race.raceActive) {
-                            this.client.logger.info(`Race started, updating it`, this);
+                            this.client.logger.debug(`Race started, updating it`, this);
                             this.racetime.startRace(race.raceRoom);
                             this.RacesDB.updateRace(<Race>{
                                 id: entry.raceId,
@@ -225,7 +232,7 @@ export class JankLadder extends LoggedManager {
         try {
             const channel = await this.client.channels.fetch(Config.jankladder.scheduleChannelId) as TextChannel;
             const message = await channel.messages.fetch(Config.jankladder.scheduleMessageId);
-            let content = `**Jank Ladder Schedule**\n`;
+            let content = `**Step Ladder Schedule**\n`;
             const now = new Date();
             const cutoffTime = new Date(now);
             cutoffTime.setHours(cutoffTime.getHours() - 2);

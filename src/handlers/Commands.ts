@@ -48,7 +48,7 @@ export default class CommandsHandler extends LoggedManager {
             const guild = await this.client.guilds.fetch(Config.discord.debug.guild) as Guild;
             const registeredCommands = await rest.put(Routes.applicationGuildCommands(Config.discord.clientId, guild.id), { body: jsonCommands }) as SlashCommand[];
             if(registeredCommands.length > 0) {
-                this.client.logger.info(`Successfully registered ${registeredCommands.length} application (/) commands and ${this.buttonCommands.length} button commands to guild ${guild.name}`);
+                this.client.logger.debug(`Successfully registered ${registeredCommands.length} application (/) commands and ${this.buttonCommands.length} button commands to guild ${guild.name}`);
             }
         /*} else {
             this.logger.debug(`Registering ${jsonCommands.length} commands on Discord...`, this);

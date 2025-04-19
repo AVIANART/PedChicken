@@ -62,7 +62,7 @@ export class SettingsDB extends LoggedManager {
                     setting.value = parseInt(row.value as string);
                     break;
                 case 'boolean':
-                    setting.value = (row.value as string) === 'true';
+                    setting.value = (row.value as string) === '1';
                     break;
                 default:
                     break;
@@ -137,7 +137,7 @@ export class SettingsDB extends LoggedManager {
                         setting.value = parseInt(row.value as string);
                         break;
                     case 'boolean':
-                        setting.value = (row.value as string) === 'true';
+                        setting.value = (row.value as string) === '1';
                         break;
                     default:
                         break;
