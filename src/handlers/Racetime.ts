@@ -5,7 +5,7 @@ import RacetimeClient from "rtgg-bot";
 import WebSocketClient from "rtgg-bot/src/websocket/client";
 
 export class RacetimeBot extends LoggedManager {
-    private rtBot;
+    private rtBot: RacetimeClient;
     public online = false;
     public lastSocket: WebSocketClient;
 
@@ -14,16 +14,6 @@ export class RacetimeBot extends LoggedManager {
         this.client = client;
         this.rtBot = new RacetimeClient(clientId, clientSecret, clientCategory);
         this.client.logger.debug("RacetimeBot initialized", this);
-        this.rtBot.on("rt error", (error: RacetimeError) => {
-            for(let err of error.errors) {
-                if(err.includes("Race cannot be started yet")) {
-                    this.sendMessage(this.lastSocket, "Not enough entrants, cancelling the race");
-                    this.lastSocket.sendMessage(<RTAction>{
-                        action: RTPacketTypes.CANCEL
-                    });
-                }
-            }
-        });
     }
 
     async initialize() {
@@ -103,10 +93,20 @@ export class RacetimeBot extends LoggedManager {
 
     async createRaceRoom(raceData: CreateRaceData) {
         try {
-            const raceRoom = await this.rtBot.createRace(raceData);
+            const raceRoom = await this.rtBot.createRace(raceData, true);
             return raceRoom;
         } catch(e) {
             this.client.logger.error(`Error while creating race room: ${e}`, this);
+            return null;
+        }
+    }
+
+    async editRaceRoom(raceUrl: string, raceData: CreateRaceData) {
+        try {
+            const raceRoom = await this.rtBot.editRace(raceUrl, raceData);
+            return raceRoom;
+        } catch(e) {
+            this.client.logger.error(`Error while editing race room: ${e}`, this);
             return null;
         }
     }

@@ -114,6 +114,38 @@ export class Avianart extends LoggedManager {
         return null;
     }
 
+    async generateMysteryForLadder(): Promise<AvianGenPayload> {
+        let genResponse = await fetch("https://avianart.games/api.php?action=mystery", {
+            "body": "[{\"preset\":\"notslow\",\"force\":[\"logic:noglitches\"],\"veto\":[\"bombbag:on\"],\"race\":true}]",
+            "method": "POST",
+            "mode": "cors"
+        });
+
+        let genstatus = await genResponse.json() as AvianGenPayload;
+        if(genstatus.status != 200) {
+            this.logger.error(`Failed to generate mystery seed!`, this);
+            return;
+        }
+        let hash = genstatus.response.hash;
+        let genStatus = AvianGenStatus.PREGEN;
+        while(genStatus !== AvianGenStatus.FAILURE) {
+            await this.sleep(5000);
+            let status = await this.fetchPermlink(hash);
+            if(!status.response.status) {
+                //Probably complete
+                if(status.response.patch) {
+                    this.logger.trace(`Seed generation complete!`, this);
+                    return status;
+                }
+            }
+            genStatus = status.response.status;
+            this.logger.trace(`Generation status for ${hash}: ${genStatus}`, this);
+        }
+
+        this.logger.error(`Failed to generate mystery seed!`, this);
+        return null;
+    }
+
     async createPreset(user: string, yaml: Attachment, name: string, notes: string, branch: string): Promise<AvianCreatePayload> {
         const payload = {
             yaml: yaml.url,

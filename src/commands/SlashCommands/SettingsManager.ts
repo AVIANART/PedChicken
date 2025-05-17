@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { SlashCommand } from "../../types";
 import { Setting, SettingsDB } from "../../handlers/db/Settings";
+import { Avianart } from "../../handlers/Avianart";
 
 let settingsManager: SettingsDB;
 
@@ -69,6 +70,12 @@ const command: SlashCommand = {
             if(!settingsManager)
                 settingsManager = new SettingsDB(interaction.client);
 
+            //Check if user has permission to use this command
+            if (!interaction.memberPermissions?.has("Administrator")) {
+                await interaction.reply("You do not have permission to use this command.");
+                return;
+            }
+
             const subcommand = interaction.options.getSubcommand();
             const name = interaction.options.getString("name");
             let value;
@@ -85,6 +92,7 @@ const command: SlashCommand = {
                         await interaction.reply("Please provide a setting name.");
                         return;
                     }
+
                     // Get the setting from the database
                     const setting = settingsManager.getSettingByName(name);
                     if (setting) {

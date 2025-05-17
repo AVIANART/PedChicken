@@ -24,7 +24,7 @@ export class SettingsDB extends LoggedManager {
 
     constructor(client) {
         super(client);
-        this.db = new Database(Config.jankladder.dbPath);
+        this.db = new Database(Config.jankladder.db.settingsDbPath);
         this.initTable();
         this.logger.debug('ScheduleDB initialized');
     }

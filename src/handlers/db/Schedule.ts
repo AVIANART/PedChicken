@@ -1,138 +1,113 @@
-import { Database } from "bun:sqlite";
+import mysql2, { QueryResult, RowDataPacket } from "mysql2/promise";
 import { LoggedManager } from "../LoggedManager";
 import * as Config from "../../../config.json";
 
-export interface ScheduledRace {
+export interface ScheduledRace extends RowDataPacket {
     id: number;
-    time: string;
-    architype: string;
-    mode: string;
+    time: Date;
+    season: number;
+    mode: number;
     raceId: number;
 }
 
-export interface ScheduledRaceFormatted {
+export interface ScheduledRaceStrict {
     id: number;
     time: Date;
-    architype: string;
-    mode: string;
+    season: number;
+    mode: number;
     raceId: number;
 }
 
 export class ScheduleDB extends LoggedManager {
-    private db: Database;
+    private db: mysql2.Connection;
 
     constructor(client) {
         super(client);
-        this.db = new Database(Config.jankladder.dbPath);
-        this.initTable();
+        this.db = null;
+        this.init();
         this.logger.debug('ScheduleDB initialized');
     }
 
     /**
      * Initialize the races table if it doesn't exist
      */
-    initTable(): void {
-        const query = `
-            CREATE TABLE IF NOT EXISTS schedule (
-                id INTEGER PRIMARY KEY,
-                time TEXT,
-                architype TEXT,
-                mode TEXT,
-                raceId INTEGER DEFAULT -1
-            )
-        `;
-        this.db.run(query);
+    async init(): Promise<void> {
+        this.db = await mysql2.createConnection({
+            host: Config.jankladder.db.host,
+            user: Config.jankladder.db.user,
+            password: Config.jankladder.db.password,
+            database: Config.jankladder.db.database,
+        });
         return; 
     }
 
     /**
      * Get a race by ID
      */
-    getScheduledRaceById(id: number): ScheduledRace | null {
-        // bun:sqlite's get is synchronous and returns the row or null
-        const row = this.db.query('SELECT * FROM schedule WHERE id = ?').get(id) as ScheduledRace | null;
+    async getScheduledRaceById(id: number): Promise<ScheduledRace | null> {
+        const sql = 'SELECT * FROM schedule WHERE id = ?';
+        const [rows, fields] = await this.db.execute<ScheduledRace[]>(sql, [id]);
+        if (rows.length === 0) {
+            return null;
+        }
+        const row = rows[0] as ScheduledRace;
         return row;
-    }
-
-    /**
-     * Insert a new race
-     */
-    insertScheduledRace(scheduledRace: Omit<ScheduledRace, 'id'>): number {
-        // bun:sqlite's run is synchronous
-        const result = this.db.run(
-            'INSERT INTO schedule (time, architype, mode) VALUES (?, ?, ?)',
-            [scheduledRace.time, scheduledRace.architype, scheduledRace.mode]
-        );
-        // Get the last inserted ID
-        const lastId = result.lastInsertRowid as number;
-        return lastId;
     }
 
     /**
      * Update an existing race
      */
-    updateScheduledRace(scheduledRace: ScheduledRace): void {
-        // bun:sqlite's run is synchronous
-        this.db.run(
-            'UPDATE schedule SET time = ?, architype = ?, mode = ?, raceId = ? WHERE id = ?',
-            [scheduledRace.time, scheduledRace.architype, scheduledRace.mode, scheduledRace.raceId, scheduledRace.id]
+    async updateScheduledRace(scheduledRace: ScheduledRace): Promise<void> {
+        await this.db.execute(
+            'UPDATE schedule SET time = ?, season = ?, mode = ?, raceId = ? WHERE id = ?',
+            [scheduledRace.time, scheduledRace.season, scheduledRace.mode, scheduledRace.raceId, scheduledRace.id]
         );
-        return;
-    }
-
-    /**
-     * Delete a race by ID
-     */
-    deleteScheduledRace(id: number): void {
-        // bun:sqlite's run is synchronous
-        this.db.run('DELETE FROM schedule WHERE id = ?', [id]);
         return;
     }
 
     /**
      * Get all races
      */
-    getAllScheduledRaces(): ScheduledRace[] {
-        // bun:sqlite's all is synchronous and returns an array
-        const rows = this.db.query('SELECT * FROM schedule').all() as ScheduledRace[];
-        return rows || [];
+    async getAllScheduledRaces(): Promise<ScheduledRace[]> {
+        const [rows, metadata] = await this.db.query<ScheduledRace[]>('SELECT * FROM schedule');
+        if (rows.length === 0) {
+            return [];
+        }
+        return rows;
     }
 
     /**
      * Get Future Races
      */
-    getFutureScheduledRaces(limit: number = 12): ScheduledRace[] {
-        // bun:sqlite's all is synchronous and returns an array
-        const query = this.db.prepare('SELECT * FROM schedule WHERE time > ? ORDER BY time ASC LIMIT ?',
-            [new Date().toISOString(), limit]
-        );
-        const rows = query.all() as ScheduledRace[];
-        return rows || [];
+    async getFutureScheduledRaces(limit: number = 12): Promise<ScheduledRace[]> {
+        const [rows, metadata] = await this.db.execute<ScheduledRace[]>('SELECT * FROM schedule WHERE time > ? ORDER BY time ASC LIMIT ?', [new Date(), limit]);
+        if (rows.length === 0) {
+            return [];
+        }
+        return rows;
     }
 
     /**
      * Get Past Races
      */
-    getPastScheduledRaces(limit: number = 12): ScheduledRace[] {
-        // bun:sqlite's all is synchronous and returns an array
-        const query = this.db.prepare('SELECT * FROM schedule WHERE time < ? ORDER BY time DESC LIMIT ?', 
-            [new Date().toISOString(), limit]
-        );
-        const rows = query.all() as ScheduledRace[];
-        return rows || [];
+    async getPastScheduledRaces(limit: number = 12): Promise<ScheduledRace[]> {
+        const [rows, metadata] = await this.db.execute<ScheduledRace[]>('SELECT * FROM schedule WHERE time < ? ORDER BY time DESC LIMIT ?', [new Date(), limit]);
+        if (rows.length === 0) {
+            return [];
+        }
+        return rows;
     }
 
     /**
      * Get Next 11 races and last race within 3 hours
      */
-    getNextScheduledRaces(): ScheduledRace[] {
-        // bun:sqlite's all is synchronous and returns an array
+    async getNextScheduledRaces(): Promise<ScheduledRace[]> {
         const date = new Date();
         date.setHours(date.getHours() - 3);
-        const query = this.db.prepare('SELECT * FROM schedule WHERE time > ? ORDER BY time ASC LIMIT 12',
-            [date.toISOString()]
-        );
-        const rows = query.all() as ScheduledRace[];
-        return rows || [];
+        const [rows, metadata] = await this.db.execute<ScheduledRace[]>('SELECT * FROM schedule WHERE time > ? ORDER BY time ASC LIMIT 12', [date]);
+        if (rows.length === 0) {
+            return [];
+        }
+        return rows;
     }
 }

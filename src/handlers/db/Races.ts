@@ -1,90 +1,76 @@
-import { Database } from "bun:sqlite";
+import mysql2, { QueryResult, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { LoggedManager } from "../LoggedManager";
 import * as Config from "../../../config.json";
 
-export interface Race {
+export interface Race extends RowDataPacket {
     id: number;
-    raceRoom: string;
     raceActive: boolean;
+    raceRoom: string;
     seed: string;
 }
 
-export class RacesDB extends LoggedManager {
-    private db: Database;
+export interface RaceStrict {
+    id: number;
+    raceActive: boolean;
+    raceRoom: string;
+    seed: string;
+}
+
+export class RaceDB extends LoggedManager {
+    private db: mysql2.Connection;
 
     constructor(client) {
         super(client);
-        this.db = new Database(Config.jankladder.dbPath);
-        this.initTable();
-        this.logger.debug('RacesDB initialized');
+        this.db = null;
+        this.init();
+        this.logger.debug('RaceDB initialized');
     }
 
     /**
      * Initialize the races table if it doesn't exist
      */
-    initTable(): void {
-        const query = `
-            CREATE TABLE IF NOT EXISTS races (
-                id INTEGER PRIMARY KEY,
-                raceRoom TEXT,
-                raceActive BOOLEAN DEFAULT 0,
-                seed TEXT DEFAULT ''
-            )
-        `;
-        this.db.run(query);
+    async init(): Promise<void> {
+        this.db = await mysql2.createConnection({
+            host: Config.jankladder.db.host,
+            user: Config.jankladder.db.user,
+            password: Config.jankladder.db.password,
+            database: Config.jankladder.db.database,
+        });
         return; 
     }
 
     /**
-     * Get a race by ID
+     * Get a Race by ID
      */
-    getRaceById(id: number): Race | null {
-        // bun:sqlite's get is synchronous and returns the row or null
-        const row = this.db.query('SELECT * FROM races WHERE id = ?').get(id) as Race | null;
+    async getRaceById(id: number): Promise<Race | null> {
+        const sql = 'SELECT * FROM races WHERE id = ?';
+        const [rows, fields] = await this.db.execute<Race[]>(sql, [id]);
+        if (rows.length === 0) {
+            return null;
+        }
+        const row = rows[0] as Race;
         return row;
     }
 
     /**
-     * Insert a new race
+     * Update a Race
      */
-    insertRace(race: Omit<Race, 'id'>): number {
-        // bun:sqlite's run is synchronous
-        const result = this.db.prepare(
-            'INSERT INTO races (raceRoom) VALUES (?)',
-            [race.raceRoom]
-        ).run();
-        // Get the last inserted ID
-        const lastId = result.lastInsertRowid as number;
-        return lastId;
-    }
-
-    /**
-     * Update an existing race
-     */
-    updateRace(race: Race): void {
-        // bun:sqlite's run is synchronous
-        this.db.run(
-            'UPDATE races SET raceRoom = ?, raceActive = ?, seed = ? WHERE id = ?',
-            [race.raceRoom, race.raceActive, race.seed, race.id]
+    async updateRace(race: Race): Promise<void> {
+        await this.db.execute(
+            'UPDATE races SET raceActive = ?, raceRoom = ?, seed = ? WHERE id = ?',
+            [race.raceActive, race.raceRoom, race.seed, race.id]
         );
         return;
     }
 
     /**
-     * Delete a race by ID
+     * Create a new Race
      */
-    deleteRace(id: number): void {
-        // bun:sqlite's run is synchronous
-        this.db.run('DELETE FROM races WHERE id = ?', [id]);
-        return;
-    }
-
-    /**
-     * Get all races
-     */
-    getAllRaces(): Race[] {
-        // bun:sqlite's all is synchronous and returns an array
-        const rows = this.db.query('SELECT * FROM races').all() as Race[];
-        return rows || [];
+    async createRace(race: Race): Promise<number> {
+        let [result, meta] = await this.db.execute(
+            'INSERT INTO races (raceActive, raceRoom, seed) VALUES (?, ?, ?)',
+            [race.raceActive, race.raceRoom, race.seed]
+        );
+        return (result as ResultSetHeader).insertId;
     }
 }
