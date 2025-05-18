@@ -184,7 +184,7 @@ export class JankLadder extends LoggedManager {
                                 
                                 if(entryMode.slug.includes("/")) {
                                     let modeRaw = entryMode.slug.split("/");
-                                    seed = await this.avianart.generateSeed(modeRaw[0], true, modeRaw[1]);
+                                    seed = await this.avianart.generateSeed(modeRaw[1], true, modeRaw[0]);
                                 } else {
                                     if(entryMode.slug == "mmmmavid23") {
                                         seed = await this.avianart.generateMysteryForLadder();
