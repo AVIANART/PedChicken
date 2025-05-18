@@ -43,6 +43,19 @@ export class RaceDB extends LoggedManager {
      * Get a Race by ID
      */
     async getRaceById(id: number): Promise<Race | null> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM races WHERE id = ?';
         const [rows, fields] = await this.db.execute<Race[]>(sql, [id]);
         if (rows.length === 0) {
@@ -56,6 +69,19 @@ export class RaceDB extends LoggedManager {
      * Update a Race
      */
     async updateRace(race: Race): Promise<void> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         await this.db.execute(
             'UPDATE races SET raceActive = ?, raceRoom = ?, seed = ? WHERE id = ?',
             [race.raceActive, race.raceRoom, race.seed, race.id]
@@ -67,6 +93,19 @@ export class RaceDB extends LoggedManager {
      * Create a new Race
      */
     async createRace(race: Race): Promise<number> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+        
         let [result, meta] = await this.db.execute(
             'INSERT INTO races (raceActive, raceRoom, seed) VALUES (?, ?, ?)',
             [race.raceActive, race.raceRoom, race.seed]

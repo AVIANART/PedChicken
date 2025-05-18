@@ -57,6 +57,19 @@ export class ModesDB extends LoggedManager {
      * Get a mode by ID
      */
     async getModeById(id: number): Promise<Mode | null> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM modes WHERE id = ?';
         const [rows, fields] = await this.db.execute<Mode[]>(sql, [id]);
         if (rows.length === 0) {
@@ -70,6 +83,19 @@ export class ModesDB extends LoggedManager {
      * Get modes by archetype ID
      */
     async getModesByArchetypeId(archetypeId: number): Promise<Mode[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM modes WHERE archetype = ?';
         const [rows, fields] = await this.db.execute<Mode[]>(sql, [archetypeId]);
         return rows as Mode[];
@@ -79,6 +105,19 @@ export class ModesDB extends LoggedManager {
      * Get all modes
      */
     async getAllModes(): Promise<Mode[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM modes';
         const [rows, fields] = await this.db.execute<Mode[]>(sql);
         return rows as Mode[];
@@ -88,6 +127,19 @@ export class ModesDB extends LoggedManager {
      * Get all active modes
      */
     async getAllActiveModes(): Promise<Mode[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM modes WHERE active = 1';
         const [rows, fields] = await this.db.execute<Mode[]>(sql);
         return rows as Mode[];
@@ -97,6 +149,19 @@ export class ModesDB extends LoggedManager {
      * Get all active modes by archetype ID
      */
     async getAllActiveModesByArchetypeId(archetypeId: number): Promise<Mode[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM modes WHERE archetype = ? AND active = 1';
         const [rows, fields] = await this.db.execute<Mode[]>(sql, [archetypeId]);
         return rows as Mode[];
@@ -106,6 +171,19 @@ export class ModesDB extends LoggedManager {
      * Get all archetypes
      */
     async getAllArchetypes(): Promise<Archetype[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM archetypes';
         const [rows, fields] = await this.db.execute<Archetype[]>(sql);
         return rows as Archetype[];
@@ -115,6 +193,19 @@ export class ModesDB extends LoggedManager {
      * Get an archetype by ID
      */
     async getArchetypeById(id: number): Promise<Archetype | null> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+        
         const sql = 'SELECT * FROM archetypes WHERE id = ?';
         const [rows, fields] = await this.db.execute<Archetype[]>(sql, [id]);
         if (rows.length === 0) {

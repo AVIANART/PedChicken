@@ -45,6 +45,19 @@ export class RolesDB extends LoggedManager {
      */
 
     async getRoleById(roleId: string): Promise<Role | null> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM roles WHERE roleId = ?';
         const [rows, fields] = await this.db.execute<Role[]>(sql, [roleId]);
         if (rows.length === 0) {
@@ -58,6 +71,19 @@ export class RolesDB extends LoggedManager {
      * Get a role by name
      */
     async getRoleByName(roleName: string): Promise<Role | null> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM roles WHERE roleName = ?';
         const [rows, fields] = await this.db.execute<Role[]>(sql, [roleName]);
         if (rows.length === 0) {
@@ -71,6 +97,19 @@ export class RolesDB extends LoggedManager {
      * Get all roles
      */
     async getAllRoles(): Promise<Role[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+
         const sql = 'SELECT * FROM roles';
         const [rows, fields] = await this.db.execute<Role[]>(sql);
         return rows;
@@ -80,6 +119,19 @@ export class RolesDB extends LoggedManager {
      * Get pingable roles by modeId
      */
     async getPingableRolesByModeId(modeId: number): Promise<PingableRole[]> {
+        //Check if the connection is still alive
+        try {
+            await this.db.ping();
+        } catch (err) {
+            this.logger.error('DB connection lost, reconnecting...');
+            this.db = await mysql2.createConnection({
+                host: Config.jankladder.db.host,
+                user: Config.jankladder.db.user,
+                password: Config.jankladder.db.password,
+                database: Config.jankladder.db.database,
+            });
+        }
+        
         const sql = 'SELECT * FROM pingableModeRoles WHERE modeId = ?';
         const [rows, fields] = await this.db.execute<PingableRole[]>(sql, [modeId]);
         return rows;
