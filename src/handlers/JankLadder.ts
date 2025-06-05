@@ -9,6 +9,7 @@ import { ScheduleDB, ScheduledRace, ScheduledRaceStrict } from "./db/Schedule";
 import { SettingsDB } from "./db/Settings";
 import { ModesDB } from "./db/Modes";
 import { RolesDB } from "./db/Roles";
+import { LadderApi } from "./LadderApi";
 
 export class JankLadder extends LoggedManager {
     lastScheduleMessage: string;
@@ -19,6 +20,7 @@ export class JankLadder extends LoggedManager {
     ModesDB: ModesDB;
     RolesDB: RolesDB;
     SettingsDB: SettingsDB;
+    LadderApi: LadderApi;
 
     constructor(client) {
         super(client);
@@ -29,6 +31,8 @@ export class JankLadder extends LoggedManager {
         this.ModesDB = new ModesDB(this.client);
         this.RolesDB = new RolesDB(this.client);
         this.SettingsDB = new SettingsDB(this.client);
+        this.LadderApi = new LadderApi(this.client);
+        this.LadderApi.initialize();
         this.initSchedule();
     }
 
@@ -134,10 +138,10 @@ export class JankLadder extends LoggedManager {
                             info_user: `Step Ladder Series - [${entryArchetype.name}] - ${entryMode.name}`,
                             goal: "Beat the game (Group)",
                             start_delay: 15,
-                            time_limit: 3,
+                            time_limit: 6,
                             auto_start: false,
                             allow_midrace_chat: false,
-                            allow_non_entrant_chat: false,
+                            allow_non_entrant_chat: true,
                             allow_comments: true,
                             hide_comments: true,
                             streaming_required: true,
@@ -217,9 +221,20 @@ export class JankLadder extends LoggedManager {
                                 });
                             }, 3000);
                         }
+                        if(entry.time.getTime() - now.getTime() <= 1000 * 70 * 5 && entry.time.getTime() - now.getTime() >= 1000 * 60 * 5) {
+                            this.client.logger.debug(`Race starting in less than 5 minutes, checking if we need to ping for it`, this);
+                            let numberOfEntrants = 0;
+                            let raceDetails = await this.racetime.fetchRaceData(race.raceRoom);
+                            numberOfEntrants = raceDetails.entrants.length;
+                            if(numberOfEntrants < 2 && numberOfEntrants > 0) {
+                                //TODO Ping roles
+                                this.client.logger.debug(`Race has less than 2 entrants, pinging roles`, this);
+                            }
+
+                        }
                         if(entry.time.getTime() - now.getTime() <= 1000 * 70 && entry.time.getTime() - now.getTime() >= 1000 * 60) {
                             this.client.logger.debug(`Race starting in less than a minute, warning about it`, this);
-                            this.racetime.sendMessage(race.raceRoom, `Race starting in less than a minute! Ready up or you will be removed!`);
+                            this.racetime.sendMessage(race.raceRoom, `@unready Race starting in less than a minute! Ready up or you will be removed!`);
                             /*
                             const raceRoom: RaceDetails = await this.racetime.editRaceRoom(race.raceRoom, <CreateRaceData>{
                                 unlisted: false,
@@ -234,7 +249,7 @@ export class JankLadder extends LoggedManager {
                                     raceRoom: race.raceRoom,
                                     seed: race.seed
                                 });
-                            }, 45 * 1000);
+                            }, 55 * 1000);
                         }
                         if(entry.time.getTime() - now.getTime() < 1000 && !race.raceActive) {
                             this.client.logger.debug(`Race started, updating it`, this);

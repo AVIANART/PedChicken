@@ -43,7 +43,12 @@ client.on("ready", async (client) => {
 		}
 	});
 
-	const jankladder = new JankLadder(client);
+	let jankLadder;
+	try {
+		jankLadder = new JankLadder(client);
+	} catch(err) {
+		client.logger.error(`Failed to initialize JankLadder: ${err}`);
+	}
 	
 	client.logger.debug(`[${client.user.username}] Ready!`);
 });
